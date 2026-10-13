@@ -1,0 +1,56 @@
+replicaCount: 1
+
+keycloak:
+  adminUser: admin
+  existingSecret: keycloak-admin
+  secretKeys:
+    adminPasswordKey: admin-password
+
+  hostname: http://keycloak.local
+  hostnameStrict: false
+
+  httpEnabled: true
+  httpsEnabled: false
+  production: false
+  proxyHeaders: xforwarded
+
+database:
+  type: postgres
+  name: keycloak
+  username: postgres
+  existingSecret: keycloak-postgres
+  secretKeys:
+    passwordKey: postgres-password
+
+postgres:
+  enabled: true
+  auth:
+    database: keycloak
+    username: ""
+    existingSecret: keycloak-postgres
+  persistence:
+    enabled: true
+    size: 4Gi
+
+persistence:
+  enabled: true
+  storageClass: ""
+  size: 3Gi
+  accessModes:
+    - ReadWriteOnce
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: keycloak.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+service:
+  type: ClusterIP
+  httpPort: 8080
+  httpsPort: 8443

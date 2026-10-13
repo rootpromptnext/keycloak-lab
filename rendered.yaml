@@ -1,0 +1,524 @@
+---
+# Source: keycloak/charts/postgres/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-keycloak-postgres
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/version: "18.0"
+    helm.sh/chart: postgres-0.9.0
+data:
+  pg_hba.conf: |
+    # Default pg_hba.conf configuration
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+    # "local" is for Unix domain socket connections only
+    local   all             all                                     trust
+    # IPv4 local connections:
+    host    all             all             127.0.0.1/32            trust
+    # IPv6 local connections:
+    host    all             all             ::1/128                 trust
+    # Allow replication connections from localhost, by a user with the
+    # replication privilege.
+    local   replication     all                                     trust
+    host    replication     all             127.0.0.1/32            trust
+    host    replication     all             ::1/128                 trust
+
+    # Allow connections from any host with password authentication
+    host    all             all             all                     md5
+  postgresql.conf: |
+    # PostgreSQL configuration file
+
+    # Connection Settings
+    listen_addresses = '*'
+    max_connections = 100
+    
+    # Memory Settings
+    shared_buffers = 128MB
+    effective_cache_size = 4GB
+    work_mem = 4MB
+    maintenance_work_mem = 64MB
+    
+    # WAL Settings
+    wal_buffers = 16MB
+    
+    # Checkpoint Settings
+    checkpoint_completion_target = 0.7
+    
+    # Query Planner Settings
+    random_page_cost = 1.1
+    
+    # Logging Settings
+    log_destination = 'stderr'
+    logging_collector = off
+    log_min_messages = warning
+    log_min_error_statement = error
+    log_statement = 'none'
+    log_min_duration_statement = -1
+    
+    # Shared Libraries
+    
+    # Locale and Formatting
+    datestyle = 'iso, mdy'
+    timezone = 'UTC'
+    lc_messages = 'en_US.utf8'
+    lc_monetary = 'en_US.utf8'
+    lc_numeric = 'en_US.utf8'
+    lc_time = 'en_US.utf8'
+    default_text_search_config = 'pg_catalog.english'
+    
+    # Set pg_hba.conf file to use
+    hba_file = '/etc/postgresql/pg_hba.conf'
+
+    # Additional Configuration
+---
+# Source: keycloak/charts/postgres/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-keycloak-postgres
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/version: "18.0"
+    helm.sh/chart: postgres-0.9.0
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+      name: postgresql
+  selector:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/name: postgres
+---
+# Source: keycloak/charts/postgres/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-keycloak-postgres-headless
+  namespace: "keycloak"
+  labels:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/version: "18.0"
+    helm.sh/chart: postgres-0.9.0
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+      name: postgresql
+  selector:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/name: postgres
+---
+# Source: keycloak/templates/service-headless.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-keycloak-headless
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/version: 26.8.0
+    helm.sh/chart: keycloak-0.21.46
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/name: keycloak
+---
+# Source: keycloak/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-keycloak
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/version: 26.8.0
+    helm.sh/chart: keycloak-0.21.46
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/name: keycloak
+---
+# Source: keycloak/charts/postgres/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-keycloak-postgres
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/version: "18.0"
+    helm.sh/chart: postgres-0.9.0
+spec:
+  replicas: 1
+  serviceName: my-keycloak-postgres-headless
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: my-keycloak
+      app.kubernetes.io/name: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: my-keycloak
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/version: "18.0"
+        helm.sh/chart: postgres-0.9.0
+    spec:
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      securityContext: 
+        fsGroup: 999
+      containers:
+        - name: postgres
+          securityContext: 
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsGroup: 999
+            runAsNonRoot: true
+            runAsUser: 999
+          image: docker.io/postgres:18.0@sha256:073e7c8b84e2197f94c8083634640ab37105effe1bc853ca4d5fbece3219b0e8
+          imagePullPolicy: Always
+          args:
+            - -c
+            - 'config_file=/etc/postgresql/postgresql.conf'
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/18/docker
+            - name: POSTGRES_DB
+              value: "keycloak"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-postgres
+                  key: postgres-password
+            - name: POSTGRES_MAX_CONNECTIONS
+              value: "100"
+          ports:
+            - name: postgresql
+              containerPort: 5432
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  pg_isready -U postgres -d keycloak -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  pg_isready -U postgres -d keycloak -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  pg_isready -U postgres -d keycloak -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 30
+          resources:
+            {}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+            - name: config
+              mountPath: /etc/postgresql
+            - name: run
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: my-keycloak-postgres
+            optional: true
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+        - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: "5Gi"
+---
+# Source: keycloak/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-keycloak
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/version: 26.8.0
+    helm.sh/chart: keycloak-0.21.46
+spec:
+  serviceName: my-keycloak-headless
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: my-keycloak
+      app.kubernetes.io/name: keycloak
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: my-keycloak
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: keycloak
+        app.kubernetes.io/version: 26.8.0
+        helm.sh/chart: keycloak-0.21.46
+    spec:
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      securityContext: 
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: copy-quarkus-lib
+          securityContext: 
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+          image: docker.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc
+          imagePullPolicy: Always
+          command: ["sh", "-c", "cp -r /opt/keycloak/lib/quarkus/* /shared-quarkus/"]
+          volumeMounts:
+            - name: keycloak-lib-quarkus
+              mountPath: /shared-quarkus
+          resources:
+            {}
+        - name: wait-for-postgres
+          securityContext: 
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+          image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "until pg_isready -h my-keycloak-postgres -p 5432 -U postgres; do echo waiting for database; sleep 2; done;"]
+          resources:
+            {}
+      containers:
+        - name: keycloak
+          securityContext: 
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+          image: docker.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc
+          imagePullPolicy: Always
+          command:
+            - /opt/keycloak/bin/kc.sh
+          args:
+            - start-dev
+            - --http-enabled=true
+            - --hostname=http://keycloak.local
+            - --hostname-strict=false
+            - --proxy-headers=xforwarded
+            - --http-port=8080
+            - --https-port=8443
+            - --http-management-port=9000
+            - --db=postgres
+            - --db-url=jdbc:postgresql://my-keycloak-postgres:5432/keycloak
+            - --health-enabled=true
+          env:
+            - name: KC_HTTP_RELATIVE_PATH
+              value: "/"
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: "admin"
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin
+                  key: admin-password
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_USERNAME
+              value: "postgres"
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-postgres
+                  key: postgres-password
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: management
+              containerPort: 9000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: management
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: management
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: management
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 60
+          resources:
+            {}
+          volumeMounts:
+            - name: data
+              mountPath: /opt/keycloak/data
+            - name: tmp
+              mountPath: /tmp
+            - name: keycloak-work
+              mountPath: /opt/keycloak/work
+            - name: keycloak-lib-quarkus
+              mountPath: /opt/keycloak/lib/quarkus
+            - name: keycloak-themes
+              mountPath: /opt/keycloak/themes
+            - name: keycloak-providers
+              mountPath: /opt/keycloak/providers
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: keycloak-work
+          emptyDir: {}
+        - name: keycloak-lib-quarkus
+          emptyDir: {}
+        - name: keycloak-themes
+          emptyDir: {}
+        - name: keycloak-providers
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/instance: my-keycloak
+          app.kubernetes.io/name: keycloak
+      spec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: "1Gi"
+---
+# Source: keycloak/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-keycloak
+  namespace: keycloak
+  labels:
+    app.kubernetes.io/instance: my-keycloak
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/version: 26.8.0
+    helm.sh/chart: keycloak-0.21.46
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: "keycloak.local"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-keycloak
+                port:
+                  number: 8080
