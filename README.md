@@ -1,6 +1,3 @@
-Your Kubernetes environment is ready for the Keycloak lab.
-
-Based on your output, we'll adapt the installation for your actual cluster:
 
 - Kubernetes: v1.35.6, single node `devops-vm`
 - Ingress controller: Traefik, so we'll use `ingress.className: traefik` instead of `nginx`.
@@ -10,7 +7,6 @@ Based on your output, we'll adapt the installation for your actual cluster:
 - Passwords: Kubernetes Secrets.
 - Persistence: enabled for Keycloak and PostgreSQL.
 
-We'll create the files using `mkdir -p` and `cat <<'EOF'`, as requested.
 
 ## 1. Create the lab directory
 
@@ -237,6 +233,12 @@ If Keycloak fails to start:
 ```
 kubectl get pods -n keycloak
 kubectl logs -n keycloak deploy/my-keycloak
+```
+
+```
+kubectl get secret keycloak-admin -n keycloak   -o jsonpath='{.data.admin-password}' | base64 -d ; echo
+
+kubectl port-forward --address 0.0.0.0 -n keycloak svc/my-keycloak 8080:8080
 ```
 
 If the PostgreSQL pod fails, get its actual name from `kubectl get pods` and inspect its logs.
